@@ -12,11 +12,12 @@ Java로 작성된 파일 처리 및 스레드 풀 예제 프로젝트입니다. 
 │       ├── main/               # 실행 예제
 │       ├── repository/         # 파일/문자열 파서
 │       └── worker/             # 레코드 처리 워커
-├── bin/                        # 컴파일 출력
-├── ping_100.txt                # PingTest 샘플 입력
-├── ping_700.txt                # PingTest 샘플 입력
-├── test.txt                    # 파일 파서 샘플 입력
-└── test2.txt                   # 파일 파서 샘플 입력
+├── fixtures/                   # 예제 실행용 텍스트 입력 파일
+│   ├── ping_100.txt            # PingTest 샘플 입력
+│   ├── ping_700.txt            # PingTest 샘플 입력
+│   ├── test.txt                # 파일 파서 샘플 입력
+│   └── test2.txt               # 파일 파서 샘플 입력
+└── bin/                        # 컴파일 출력
 ```
 
 ## 요구사항
@@ -58,7 +59,7 @@ java -cp bin application.main.PingTest
 `PingTest`는 입력 파일 경로와 스레드 개수를 인자로 받을 수 있습니다.
 
 ```sh
-java -cp bin application.main.PingTest ping_100.txt 10
+java -cp bin application.main.PingTest fixtures/ping_100.txt 10
 ```
 
 ## 주요 클래스

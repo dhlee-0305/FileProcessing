@@ -16,8 +16,7 @@ public class SimpleFileParse {
 		ThreadPoolFramework threadPoolFrame = null;
 		
 		if(filePath.length() <= 0)
-			//filePath = "c:/eclipse/workspace/FileProcessing/test.txt";
-			filePath = "test2.txt";
+			filePath = "fixtures/test2.txt";
 		
 		ThreadWorker jeongSanWorker = new JeongSanFileWorker();
 		DataRepository dataRepo = new MMapStringParser();

@@ -23,7 +23,7 @@ public class PingTest {
 		}else{	
 			// Argument가 없다면 기본 값 사용
 			if(filePath.length() <= 0)
-				filePath = "ping_100.txt";
+				filePath = "fixtures/ping_100.txt";
 
 			if(maxThreadCount == 0)
 				maxThreadCount = 10;
