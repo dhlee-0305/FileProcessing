@@ -25,7 +25,10 @@ public class ThreadPoolFramework {
 	private DataRepository dataRepo = null;
 
 	/** 파일 종료 확인 변수 */
-	private boolean checkEOF = false;
+	private volatile boolean checkEOF = false;
+
+	/** 스케줄 스레드에서 발생한 예외 */
+	private volatile Exception schedulerException = null;
 
 	/** 작업 스케줄 리스트 멤버 변수 */
 	private LinkedList<ThreadRunner> THREAD_POOL = new LinkedList<ThreadRunner>();
@@ -47,6 +50,16 @@ public class ThreadPoolFramework {
 			ThreadWorker threadWorker,
 			DataRepository dataRepo,
 			int maxThreadCount) throws Exception {
+
+		if (threadWorker == null) {
+			throw new IllegalArgumentException("threadWorker is null");
+		}
+		if (dataRepo == null) {
+			throw new IllegalArgumentException("dataRepo is null");
+		}
+		if (maxThreadCount <= 0) {
+			throw new IllegalArgumentException("maxThreadCount must be greater than 0");
+		}
 
 		this.threadWorker = threadWorker;
 		this.dataRepo = dataRepo;
@@ -100,7 +113,7 @@ public class ThreadPoolFramework {
 			try {
 				Object readData = dataRepo.getData();
 				if (readData == null) {
-					// EOF 이거나 Error 발생
+					// EOF
 					System.out.println("threadScheduler(1) EOF");
 					this.checkEOF = true;
 					return;
@@ -113,8 +126,8 @@ public class ThreadPoolFramework {
 					pushJob(i, readString);
 				}
 			} catch (Exception e) {
-				// EOF 이거나 Error 발생
-				System.out.println("threadScheduler(2) EOF or Exception:" + e.getMessage());
+				System.out.println("threadScheduler Exception:" + e.getMessage());
+				this.schedulerException = e;
 				this.checkEOF = true;
 				return;
 			}
@@ -201,6 +214,10 @@ public class ThreadPoolFramework {
 			// 작업 스레드 종료 대기
 			waitAllThread();
 
+			if (this.schedulerException != null) {
+				throw this.schedulerException;
+			}
+
 			// 스케줄 스레드 종료
 			schedulerThread.interrupt();
 			// schedulerThread.join(); // Spring Batch로 구현 시 join하는 경우 스레드 해제가 안되는 현상 발생함
@@ -222,21 +239,25 @@ public class ThreadPoolFramework {
 	 * @throws InterruptedException 작업 스레드 종료시 에러 발생
 	 */
 	private void waitAllThread() throws InterruptedException {
-		while (THREAD_POOL.size() > 0) {
+		while (true) {
 			ThreadRunner thread;
 			synchronized (THREAD_POOL) {
+				if (THREAD_POOL.size() <= 0) {
+					return;
+				}
 				thread = (ThreadRunner) THREAD_POOL.getFirst();
+
+				if (thread.isReady()) {
+					thread.interrupt();
+					THREAD_POOL.removeFirst();
+					System.out.print(">");
+					continue;
+				}
 			}
 
-			if (thread.isReady()) {
-				thread.interrupt();
-				THREAD_POOL.removeFirst();
-				System.out.print(">");
-			} else {
-				try {
-					Thread.sleep(1000 * 1);
-				} catch (Exception e) {
-				}
+			try {
+				Thread.sleep(1000 * 1);
+			} catch (Exception e) {
 			}
 		}
 	}

@@ -26,7 +26,7 @@ public class ThreadRunner extends Thread{
 	/**
 	 * 스레드 상태
 	 */
-	private boolean status = false;
+	private volatile boolean status = false;
 	/**
 	 * 작업 클래스
 	 */

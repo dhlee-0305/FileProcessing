@@ -44,8 +44,7 @@ public class MMapStringParser implements DataRepository{
 		}
 	
 
-	public Object getData(){
-		
+	public Object getData() throws Exception{
 		String readString = null;
 		byte[] readBuffer = new byte[10];
 		
@@ -53,29 +52,23 @@ public class MMapStringParser implements DataRepository{
 			mbb.get(readBuffer);
 			readString = new String(readBuffer);
 		}catch(BufferUnderflowException bue){
-			if(mbb.hasRemaining()){
-				for(int i=0; mbb.hasRemaining(); i++){
-					try{
-						readBuffer[i] = mbb.get();
-					}catch(BufferUnderflowException bue2){
-						break;
-					}catch(Exception e){
-						e.printStackTrace();
-						break;
-					}
-				}
-				readString = new String(readBuffer);
-				}else{
-					return null;
-				}
+			if(!mbb.hasRemaining()){
 				close();
-			}catch(Exception e){
-				System.out.println("MMapStringFilter.filter:"+e.getMessage());
-				close();
+				return null;
 			}
-			
-			return readString;
+
+			for(int i=0; mbb.hasRemaining(); i++){
+				readBuffer[i] = mbb.get();
+			}
+			readString = new String(readBuffer);
+			close();
+		}catch(Exception e){
+			close();
+			throw e;
 		}
+			
+		return readString;
+	}
 		
 		public void close(){
 			try{

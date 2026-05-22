@@ -17,16 +17,29 @@ public class PingTest {
 		ThreadPoolFramework threadPoolFrame = null;
 		
 		// Argument가 있다면 읽어와 파일경로와 스레드 개수에 설정해 준다.
-		if(args.length == 2){
-			filePath = args[0];
-			maxThreadCount = Integer.parseInt(args[1]);
-		}else{	
-			// Argument가 없다면 기본 값 사용
-			if(filePath.length() <= 0)
-				filePath = "fixtures/ping_100.txt";
+		try{
+			if(args.length == 2){
+				filePath = args[0];
+				maxThreadCount = Integer.parseInt(args[1]);
+			}else if(args.length == 0){
+				// Argument가 없다면 기본 값 사용
+				if(filePath.length() <= 0)
+					filePath = "fixtures/ping_100.txt";
+	
+				if(maxThreadCount == 0)
+					maxThreadCount = 10;
+			}else{
+				System.out.println("Usage: java -cp bin application.main.PingTest <filePath> <threadCount>");
+				return;
+			}
 
-			if(maxThreadCount == 0)
-				maxThreadCount = 10;
+			if(maxThreadCount <= 0){
+				System.out.println("threadCount must be greater than 0");
+				return;
+			}
+		}catch(NumberFormatException e){
+			System.out.println("threadCount must be a number");
+			return;
 		}
 				
 		ThreadWorker threadWorker = new PingThreadWorker();

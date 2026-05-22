@@ -21,7 +21,7 @@ public interface DataRepository extends AutoCloseable {
 	 *   
 	 * @return String 읽어들인 값
 	 */
-	Object getData();
+	Object getData() throws Exception;
 
 	/**
 	 * Repository에서 사용한 자원을 반납한다.
