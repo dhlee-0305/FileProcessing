@@ -18,6 +18,7 @@ import java.nio.channels.FileChannel;
 import framework.DataRepository;
 
 public class MMapStringParser implements DataRepository{
+	private RandomAccessFile randomAccessFile = null;
 	private FileChannel fc = null;
 	private MappedByteBuffer mbb = null;
 	private File mmapFile = null;
@@ -27,7 +28,8 @@ public class MMapStringParser implements DataRepository{
 			// 데이터 파일  오픈
 			if(fc == null){
 				mmapFile = new File(repoInfo.toString());
-				fc = new RandomAccessFile(mmapFile, "r").getChannel();
+				randomAccessFile = new RandomAccessFile(mmapFile, "r");
+				fc = randomAccessFile.getChannel();
 			}
 
 			// 파일을 메모리 맵으로 변환
@@ -80,6 +82,12 @@ public class MMapStringParser implements DataRepository{
 				if(fc != null){
 					fc.close();
 					fc = null;
+				}
+			}catch(Exception e){}
+			try{
+				if(randomAccessFile != null){
+					randomAccessFile.close();
+					randomAccessFile = null;
 				}
 			}catch(Exception e){}
 			mbb = null;
