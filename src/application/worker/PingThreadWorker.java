@@ -37,6 +37,7 @@ public class PingThreadWorker implements ThreadWorker{
 		String ipAddress = threadJob.getObject().toString();
 		
 		//System.out.println("index:"+countIndex+", ip:"+ipAddress);
+		// ping 대상에 명령 구분자가 포함되지 않도록 허용 문자만 처리한다.
 		if(!isValidPingTarget(ipAddress)){
 			addFailCount();
 			System.out.println("T"+String.format("%03d", threadIndex)+" ("+String.format("%03d", countIndex)+") PingTest ipAddress("+ipAddress+") --> 실패");
@@ -94,6 +95,13 @@ public class PingThreadWorker implements ThreadWorker{
 
 		}
 		
+	/**
+	 * 운영체제에 맞는 ping 실행 명령을 생성한다.
+	 * shell을 거치지 않고 인자를 분리하여 전달한다.
+	 * 
+	 * @param ipAddress ping 대상 주소
+	 * @return ProcessBuilder ping 실행 명령
+	 */
 	private ProcessBuilder createPingProcessBuilder(String ipAddress){
 		if(isWindows()){
 			return new ProcessBuilder("ping", "-n", "1", ipAddress);
@@ -101,26 +109,45 @@ public class PingThreadWorker implements ThreadWorker{
 		return new ProcessBuilder("ping", "-c", "1", ipAddress);
 	}
 	
+	/**
+	 * 현재 실행 환경이 Windows인지 확인한다.
+	 * 
+	 * @return boolean Windows 여부
+	 */
 	private boolean isWindows(){
 		String osName = System.getProperty("os.name");
 		return osName != null && osName.toLowerCase().contains("win");
 	}
 	
+	/**
+	 * ping 대상 주소로 사용할 수 있는 문자열인지 확인한다.
+	 * 
+	 * @param target ping 대상 주소
+	 * @return boolean 유효 여부
+	 */
 	private boolean isValidPingTarget(String target){
 		return target != null && target.matches("[A-Za-z0-9._:-]+");
 	}
 	
+	/**
+	 * 성공 카운트를 증가시킨다.
+	 * 여러 작업 스레드에서 공유하므로 동기화한다.
+	 */
 	private synchronized void addSuccessCount(){
 		successCount++;
 		totalCount++;
 	}
 	
+	/**
+	 * 실패 카운트를 증가시킨다.
+	 * 여러 작업 스레드에서 공유하므로 동기화한다.
+	 */
 	private synchronized void addFailCount(){
 		failCount++;
 		totalCount++;
 	}
 	    
-	    public synchronized String getSummary(){
-	    	return "Total:"+totalCount+", Success:"+successCount+", Fail:"+failCount;
-    }
+	public synchronized String getSummary(){
+		return "Total:"+totalCount+", Success:"+successCount+", Fail:"+failCount;
+	}
 }
