@@ -1,0 +1,13 @@
+# Java build output
+/bin/
+*.class
+
+# Eclipse local metadata
+/.settings/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
