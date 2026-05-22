@@ -31,6 +31,11 @@ public class ThreadRunner extends Thread{
 	 * 작업 클래스
 	 */
 	private ThreadWorker threadWorker;
+
+	/**
+	 * 작업 실행 중 발생한 예외
+	 */
+	private volatile Exception workerException = null;
 	
 	
 	/**
@@ -68,6 +73,7 @@ public class ThreadRunner extends Thread{
 			}catch(InterruptedException ie){
 				return;
 			}catch(Exception e){
+				this.workerException = e;
 				System.out.println("ServerRunner : "+e.getMessage());
 			}finally{
 				// 3) 작업 완료 후 준비 상태로 스레드 상태 변경
@@ -112,7 +118,18 @@ public class ThreadRunner extends Thread{
 	 * 작업 스레드를 작업 가능 상태로 변경한다.
 	 * </p>
 	 */
-	private void setReady(){
+	void setReady(){
 		this.status = true;
+	}
+
+	/**
+	 * <p>
+	 * 작업 실행 중 발생한 예외를 반환한다.
+	 * </p>
+	 * 
+	 * @return Exception 작업 실행 중 발생한 예외
+	 */
+	public Exception getWorkerException(){
+		return this.workerException;
 	}
 }

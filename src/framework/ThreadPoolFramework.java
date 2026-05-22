@@ -30,6 +30,9 @@ public class ThreadPoolFramework {
 	/** 스케줄 스레드에서 발생한 예외 */
 	private volatile Exception schedulerException = null;
 
+	/** 작업 스레드에서 발생한 예외 */
+	private volatile Exception workerException = null;
+
 	/** 작업 스케줄 리스트 멤버 변수 */
 	private LinkedList<ThreadRunner> THREAD_POOL = new LinkedList<ThreadRunner>();
 
@@ -41,12 +44,12 @@ public class ThreadPoolFramework {
 	 * ThreadPoolFrame 클래스 생성자
 	 * </p>
 	 * 
-		 * @param threadWorker   실제 작업을 실행할 클래스
-		 * @param dataRepo       파일 해석 클래스
-		 * @param maxThreadCount 스레드 개수
-		 * @throws Exception 스레드 풀 생성 시 에러 발생
-		 * 
-		 */
+	 * @param threadWorker   실제 작업을 실행할 클래스
+	 * @param dataRepo       파일 해석 클래스
+	 * @param maxThreadCount 스레드 개수
+	 * @throws Exception 스레드 풀 생성 시 에러 발생
+	 * 
+	 */
 	public ThreadPoolFramework(
 			ThreadWorker threadWorker,
 			DataRepository dataRepo,
@@ -150,7 +153,7 @@ public class ThreadPoolFramework {
 	 * @param long   jobIndex 스레드에 전달할 Job Index
 	 * @param Object obj 스레드에 전달할 데이타 Object
 	 */
-	synchronized private void pushJob(long jobIndex, Object obj) {
+	synchronized private void pushJob(long jobIndex, Object obj) throws Exception {
 		int waitCount = 0;
 
 		while (true) {
@@ -168,9 +171,10 @@ public class ThreadPoolFramework {
 							// 데이터를 넣는다. put()함수는 queue에 자리가 없는 경우 자리가 생길때 까지 대기함
 							THREAD_POOL_DATA[threadRunner.getThreadIndex()].put(threadJob);
 						} catch (Exception e) {
+							threadRunner.setReady();
 							System.out.println("check pushJob for threadIndex:" + threadRunner.getThreadIndex()
 									+ ", jobIndex: " + jobIndex + ", Object: " + obj.toString());
-							e.printStackTrace();
+							throw e;
 						}
 
 						return;
@@ -219,6 +223,10 @@ public class ThreadPoolFramework {
 				throw this.schedulerException;
 			}
 
+			if (this.workerException != null) {
+				throw this.workerException;
+			}
+
 			// 스케줄 스레드 종료
 			schedulerThread.interrupt();
 			// schedulerThread.join(); // Spring Batch로 구현 시 join하는 경우 스레드 해제가 안되는 현상 발생함
@@ -249,6 +257,9 @@ public class ThreadPoolFramework {
 				thread = (ThreadRunner) THREAD_POOL.getFirst();
 
 				if (thread.isReady()) {
+					if (thread.getWorkerException() != null && this.workerException == null) {
+						this.workerException = thread.getWorkerException();
+					}
 					thread.interrupt();
 					THREAD_POOL.removeFirst();
 					System.out.print(">");
