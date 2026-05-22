@@ -34,16 +34,23 @@ public class CRStringParser implements DataRepository{
 		
 		try{
 			readLine = bufferReader.readLine();
+			if(readLine == null){
+				close();
+			}
 		}catch(Exception e){
 			System.out.println("EOF or Exception CRStringFilter.readLine:"+e.getMessage());
-			try{ 
-				bufferReader.close(); 
-			}catch(Exception e2)
-			{
-				// nothing - perhaps EOF
-			}
+			close();
 		}
 		
 		return readLine;
+	}
+	
+	public void close(){
+		try{
+			if(bufferReader != null){
+				bufferReader.close();
+				bufferReader = null;
+			}
+		}catch(Exception e){}
 	}
 }

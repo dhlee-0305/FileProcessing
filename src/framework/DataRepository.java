@@ -8,7 +8,7 @@ package framework;
  * @version 1.0
  * @since 1.0
  */
-public interface DataRepository {
+public interface DataRepository extends AutoCloseable {
 
 	/**
 	 * Repository에서 데이테를 읽기 위한 초기화 작업 정의 
@@ -22,5 +22,10 @@ public interface DataRepository {
 	 * @return String 읽어들인 값
 	 */
 	Object getData();
+
+	/**
+	 * Repository에서 사용한 자원을 반납한다.
+	 */
+	void close();
 
 }

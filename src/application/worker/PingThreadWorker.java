@@ -1,6 +1,8 @@
 package application.worker;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
 
 import framework.ThreadJob;
 import framework.ThreadWorker;
@@ -14,7 +16,6 @@ import framework.ThreadWorker;
  * @see {@link ThreadWorker}
  */
 public class PingThreadWorker implements ThreadWorker{
-	private final String pingCmdStr = "cmd /c chcp 437 & ping -n 1 "; 			// cmd 명령어 : "ping -c 1"
 	private final String pingSuccessLoss = "0% loss"; 							// cmd 결과 : "0% packet loss";
 	private final String pingSuccessRoundTrip = "round trip";					// cmd 결과 : "approximate round trip";
 	private final String pingTimeOut = "Request timed out"; 					// cmd 결과 : "Request timed out.";
@@ -28,39 +29,35 @@ public class PingThreadWorker implements ThreadWorker{
 		ByteArrayOutputStream pingResultByteArray = new ByteArrayOutputStream();
 		boolean isOK = false;
 		Process process = null;
-		long processTime;
-		long timeoutInMillis;
-		long finish;
-
+		InputStream processInputStream = null;
+		InputStream processErrorStream = null;
+	
 		int threadIndex = threadJob.getThreadIndex();
 		long countIndex = threadJob.getJobIndex();
 		String ipAddress = threadJob.getObject().toString();
 		
-		String cmdString = pingCmdStr+ipAddress;
-		
 		//System.out.println("index:"+countIndex+", ip:"+ipAddress);
-		//System.out.println("PING:"+cmdString);
 				
 		try{
 			byte[] msg = new byte[1024];
 			int readLength;
 			
-			processTime = System.currentTimeMillis(); 				// 현재시간
-			timeoutInMillis = (long) (1000L * 0.5);  				//timeout으로 지정할 시간 (1000 * 원하는 초)
-			finish = processTime + timeoutInMillis; 				// cmd 명령 실행 이후 timeout이 되는 시간
-			process = Runtime.getRuntime().exec(cmdString) ; 		//cmd 명령 실행
-					
-			while(processIsAlive(process)){ 						// process가 살아있는지 확인
-    			Thread.sleep(100); 									// process가 작동을 끝낼때까지 대기
-    			if(System.currentTimeMillis() > finish){ 			// 타임아웃 시간을 넘겼는지 확인
-    				process.destroy(); 								// process 강제종료
-    			}
-    		}
+			ProcessBuilder processBuilder = createPingProcessBuilder(ipAddress);
+			processBuilder.redirectErrorStream(true);
+			process = processBuilder.start();
+			process.getOutputStream().close();
+			processInputStream = process.getInputStream();
+			processErrorStream = process.getErrorStream();
 			
-            while((readLength=process.getInputStream().read(msg)) > 0) {	// process결과 읽기
+			if(!process.waitFor(500, TimeUnit.MILLISECONDS)){
+				process.destroyForcibly();
+				process.waitFor();
+			}
+			
+            while((readLength=processInputStream.read(msg)) > 0) {	// process결과 읽기
             	pingResultByteArray.write(msg, 0, readLength);
             }
-            
+	            
             // 타임아웃과 연결실패가 없고, 손실률0%에 왕복 시간이 출력된다면 정상으로 처리한다.
             if(	!new String(pingResultByteArray.toString()).contains(pingTimeOut) &&
             	!new String(pingResultByteArray.toString()).contains(pingUnreachable) &&
@@ -69,11 +66,16 @@ public class PingThreadWorker implements ThreadWorker{
             	
         		isOK = true;
         	}
-    		
-    		pingResultByteArray.close();            
-		}catch(Exception e){
-			
-		}
+	    		
+	    		pingResultByteArray.close();            
+			}catch(Exception e){
+				
+			}finally{
+				try{ if(processInputStream != null) processInputStream.close(); }catch(Exception e){}
+				try{ if(processErrorStream != null) processErrorStream.close(); }catch(Exception e){}
+				if(process != null)
+					process.destroy();
+			}
 		
 		String Result = "실패";
 		if(isOK){
@@ -87,28 +89,21 @@ public class PingThreadWorker implements ThreadWorker{
 		
 		System.out.println("T"+String.format("%03d", threadIndex)+" ("+String.format("%03d", countIndex)+") PingTest ipAddress("+ipAddress+") --> "+Result);
 
+		}
+		
+	private ProcessBuilder createPingProcessBuilder(String ipAddress){
+		if(isWindows()){
+			return new ProcessBuilder("cmd", "/c", "chcp 437 > nul & ping -n 1 "+ipAddress);
+		}
+		return new ProcessBuilder("ping", "-c", "1", ipAddress);
 	}
 	
-    /**
-     * processIsAlive
-     * Process가 죽었는지, 살았는지를 check한다. (timeout 확인을 위해 사용)
-     * process.exitValue() 사용시 process가 종료되지 않을경우 IllegalThreadStateException이 발생하는것을 이용.
-     * @param Process
-     * @return boolean
-     * 
-     * @author yjchoi
-     * @since 2013.07.11
-     */
-    public boolean processIsAlive(Process process){
-    	try{
-	    	process.exitValue(); 					// sub process가 정상종료될때 0을 return.
-	    	return false;
-    	}catch(IllegalThreadStateException itse){ 	// process가 살아있는경우
-    		return true;
-    	}
-    }
-    
-    public String getSummary(){
-    	return "Total:"+totalCount+", Success:"+successCount+", Fail:"+failCount;
+	private boolean isWindows(){
+		String osName = System.getProperty("os.name");
+		return osName != null && osName.toLowerCase().contains("win");
+	}
+	    
+	    public String getSummary(){
+	    	return "Total:"+totalCount+", Success:"+successCount+", Fail:"+failCount;
     }
 }

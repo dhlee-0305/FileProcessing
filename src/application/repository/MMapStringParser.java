@@ -35,11 +35,11 @@ public class MMapStringParser implements DataRepository{
 				mbb = fc.map(FileChannel.MapMode.READ_ONLY, 0, mmapFile.length());
 		}catch(FileNotFoundException ffe){
 			throw new FileNotFoundException();
-		}catch(Exception e){
-			System.out.println("MMapStringFilter.openFile:"+e.getMessage());
-			try{ fc.close(); }catch(Exception e2){}
+			}catch(Exception e){
+				System.out.println("MMapStringFilter.openFile:"+e.getMessage());
+				close();
+			}
 		}
-	}
 	
 
 	public Object getData(){
@@ -63,15 +63,25 @@ public class MMapStringParser implements DataRepository{
 					}
 				}
 				readString = new String(readBuffer);
-			}else{
-				return null;
+				}else{
+					return null;
+				}
+				close();
+			}catch(Exception e){
+				System.out.println("MMapStringFilter.filter:"+e.getMessage());
+				close();
 			}
-			try{ fc.close(); }catch(Exception e2){}
-		}catch(Exception e){
-			System.out.println("MMapStringFilter.filter:"+e.getMessage());
-			try{ fc.close(); }catch(Exception e2){}
+			
+			return readString;
 		}
 		
-		return readString;
+		public void close(){
+			try{
+				if(fc != null){
+					fc.close();
+					fc = null;
+				}
+			}catch(Exception e){}
+			mbb = null;
+		}
 	}
-}

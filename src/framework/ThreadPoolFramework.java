@@ -179,19 +179,24 @@ public class ThreadPoolFramework{
 	 * @throws Exception 스케줄 스레드 종료시 에러 발생
 	 */	
 	public void finishingJob() throws Exception{
-		// 입력 데이타를 전부 읽었는지 확인
-		while(!this.getCheckEOF()){
-			try{
-				Thread.sleep(1000*2);
-			}catch(Exception e){}
+		try{
+			// 입력 데이타를 전부 읽었는지 확인
+			while(!this.getCheckEOF()){
+				try{
+					Thread.sleep(1000*2);
+				}catch(Exception e){}
+			}
+			
+			// 작업 스레드 종료 대기
+			waitAllThread();
+			
+			// 스케줄 스레드 종료
+			schedulerThread.interrupt();
+			//schedulerThread.join(); // Spring Batch로 구현 시  join하는 경우 스레드 해제가 안되는 현상 발생함
+		}finally{
+			if(dataRepo != null)
+				dataRepo.close();
 		}
-		
-		// 작업 스레드 종료 대기
-		waitAllThread();
-		
-		// 스케줄 스레드 종료
-		schedulerThread.interrupt();
-		//schedulerThread.join(); // Spring Batch로 구현 시  join하는 경우 스레드 해제가 안되는 현상 발생함
 	}
 
 	/**
