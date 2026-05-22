@@ -1,13 +1,15 @@
 package framework;
 
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * ThreadRunner 클래스는 스케줄 스레드에서 데이타를 전달 받아 작업을 실행하는 기능을 구현한다.<br>
  * 실제 작업은 ThreadWorker 인터페이스를 구현한 클래스를 작업에 이용한다.
  * 
  * <pre>
- * 1) 작업 Queue에 데이타가 들어올때까지 wait()
- * 2) notify()를 수신하면 작업 클래스를 통해 데이타 처리
+ * 1) 공유 작업 Queue에서 데이타가 들어올때까지 take()
+ * 2) 작업 클래스를 통해 데이타 처리
+ * 3) 종료 신호를 수신하면 스레드 종료
  * </pre>
  * 
  * @author dhlee
@@ -24,10 +26,6 @@ public class ThreadRunner extends Thread{
 	 */
 	private ThreadData jobQueue = null;
 	/**
-	 * 스레드 상태
-	 */
-	private volatile boolean status = false;
-	/**
 	 * 작업 클래스
 	 */
 	private ThreadWorker threadWorker;
@@ -35,7 +33,7 @@ public class ThreadRunner extends Thread{
 	/**
 	 * 작업 실행 중 발생한 예외
 	 */
-	private volatile Exception workerException = null;
+	private AtomicReference<Exception> workerException = null;
 	
 	
 	/**
@@ -47,11 +45,11 @@ public class ThreadRunner extends Thread{
 	 * @param threadData 작업 데이터를 전달하기 위한 Queue
 	 * @param threadWorker 실제 작업을 실행할 클래스
 	 */
-	ThreadRunner(int threadIndex, ThreadData threadData, ThreadWorker threadWorker){
+	ThreadRunner(int threadIndex, ThreadData threadData, ThreadWorker threadWorker, AtomicReference<Exception> workerException){
 		this.threadIndex = threadIndex;
 		this.jobQueue = threadData;
-		this.status = true;
 		this.threadWorker = threadWorker;
+		this.workerException = workerException;
 	}
 	
 	/**
@@ -60,10 +58,14 @@ public class ThreadRunner extends Thread{
 	 * </p>
 	 */
 	public void run(){
-		while(!Thread.interrupted()){
+		while(true){
 			try{
 				// 1)ThreadJob 클래스에서 데이터를 받아옴 - 데이터가 없는 경우 대기함
 				ThreadJob threadJob = jobQueue.take();
+				if(threadJob.isShutdown()){
+					return;
+				}
+				threadJob.setThreadIndex(threadIndex);
 				
 				// 2)스레드 인덱스, 잡인덱스를 추가하여 데이터 전달(스레드인덱스, 작업인덱스, Data......)
 				//this.threadWorker.serve(threadIndex+","+data.getJobIndex()+","+data.getObject());
@@ -73,11 +75,8 @@ public class ThreadRunner extends Thread{
 			}catch(InterruptedException ie){
 				return;
 			}catch(Exception e){
-				this.workerException = e;
+				this.workerException.compareAndSet(null, e);
 				System.out.println("ServerRunner : "+e.getMessage());
-			}finally{
-				// 3) 작업 완료 후 준비 상태로 스레드 상태 변경
-				this.setReady();
 			}
 		}
 	}
@@ -92,35 +91,6 @@ public class ThreadRunner extends Thread{
 	public int getThreadIndex(){
 		return threadIndex;
 	}
-	
-	/**
-	 * <p>
-	 * 작업 스레드가 작업을 받을 수 있는 상태인지 반환한다.
-	 * </p>
-	 * 
-	 * @return boolean 작업 가능 여부
-	 */
-	public boolean isReady(){
-		return status;
-	}
-	
-	/**
-	 * <p>
-	 * 작업 스레드를 작업 중 상태로 변경한다.
-	 * </p>
-	 */
-	public void setBusy(){
-		status = false;
-	}
-	
-	/**
-	 * <p>
-	 * 작업 스레드를 작업 가능 상태로 변경한다.
-	 * </p>
-	 */
-	void setReady(){
-		this.status = true;
-	}
 
 	/**
 	 * <p>
@@ -130,6 +100,6 @@ public class ThreadRunner extends Thread{
 	 * @return Exception 작업 실행 중 발생한 예외
 	 */
 	public Exception getWorkerException(){
-		return this.workerException;
+		return this.workerException.get();
 	}
 }

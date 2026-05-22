@@ -1,7 +1,7 @@
 package framework;
 
 import java.util.LinkedList;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * ThreadPoolFrame 클래스는 파일 처리를 위한 Thread Pool Framework을 제공한다.<br>
@@ -31,13 +31,16 @@ public class ThreadPoolFramework {
 	private volatile Exception schedulerException = null;
 
 	/** 작업 스레드에서 발생한 예외 */
-	private volatile Exception workerException = null;
+	private AtomicReference<Exception> workerException = new AtomicReference<Exception>();
 
 	/** 작업 스케줄 리스트 멤버 변수 */
 	private LinkedList<ThreadRunner> THREAD_POOL = new LinkedList<ThreadRunner>();
 
-	/** 작업 스레드에 전달할 데이타 배열 멤버 변수 */
-	private ThreadData[] THREAD_POOL_DATA = null;
+	/** 작업 스레드에 전달할 공유 Queue */
+	private ThreadData jobQueue = null;
+
+	/** 작업 스레드 개수 */
+	private int maxThreadCount = 0;
 
 	/**
 	 * <p>
@@ -67,12 +70,12 @@ public class ThreadPoolFramework {
 
 		this.threadWorker = threadWorker;
 		this.dataRepo = dataRepo;
+		this.maxThreadCount = maxThreadCount;
 
-		THREAD_POOL_DATA = new ThreadData[maxThreadCount];
+		jobQueue = new ThreadData(maxThreadCount * 2);
 
 		// work Thread Pool create
 		for (int i = 0; i < maxThreadCount; i++) {
-			THREAD_POOL_DATA[i] = new ThreadData();
 			createThreadPool(i);
 		}
 
@@ -98,7 +101,7 @@ public class ThreadPoolFramework {
 	 * @param int idx 스레드 인덱스 번호
 	 */
 	private void createThreadPool(int threadIndex) {
-		ThreadRunner threadRunner = new ThreadRunner(threadIndex, THREAD_POOL_DATA[threadIndex], this.threadWorker);
+		ThreadRunner threadRunner = new ThreadRunner(threadIndex, jobQueue, this.threadWorker, this.workerException);
 
 		synchronized (THREAD_POOL) {
 			THREAD_POOL.add(threadRunner);
@@ -113,13 +116,12 @@ public class ThreadPoolFramework {
 	 * </p>
 	 */
 	private void threadScheduler() {
-		for (long i = 0;; i++) {
-			try {
+		try {
+			for (long i = 0;; i++) {
 				Object readData = dataRepo.getData();
 				if (readData == null) {
 					// EOF
 					System.out.println("threadScheduler(1) EOF");
-					this.checkEOF = true;
 					return;
 				}
 
@@ -129,12 +131,14 @@ public class ThreadPoolFramework {
 					// 작업 전달
 					pushJob(i, readString);
 				}
-			} catch (Exception e) {
-				System.out.println("threadScheduler Exception:" + e.getMessage());
-				this.schedulerException = e;
-				this.checkEOF = true;
-				return;
 			}
+		} catch (Exception e) {
+			System.out.println("threadScheduler Exception:" + e.getMessage());
+			this.schedulerException = e;
+			return;
+		} finally {
+			pushShutdownJobs();
+			this.checkEOF = true;
 		}
 	}
 
@@ -144,51 +148,33 @@ public class ThreadPoolFramework {
 	 * </p>
 	 * 
 	 * <pre>
-	 * 1) 유휴 스레드 탐색
-	 * 2) Status = false로 상태 변경
-	 * 3) 전송할 스레드 잡 생성
-	 * 4) 데이타 put
+	 * 1) 전송할 스레드 잡 생성
+	 * 2) 공유 Queue에 데이타 put
 	 * </pre>
 	 * 
 	 * @param long   jobIndex 스레드에 전달할 Job Index
 	 * @param Object obj 스레드에 전달할 데이타 Object
 	 */
-	synchronized private void pushJob(long jobIndex, Object obj) throws Exception {
-		int waitCount = 0;
+	private void pushJob(long jobIndex, Object obj) throws Exception {
+		ThreadJob threadJob = new ThreadJob(-1, jobIndex, obj);
+		jobQueue.put(threadJob);
+	}
 
-		while (true) {
-			// 유휴 스레드 탐색
-			synchronized (THREAD_POOL) {
-				for (ThreadRunner threadRunner : THREAD_POOL) {
-					// System.out.println("check pushJob for jobIndex : "+jobIndex+", Object :
-					// "+obj.toString());
-					if (threadRunner.isReady()) {
-						threadRunner.setBusy();
-
-						ThreadJob threadJob = new ThreadJob(threadRunner.getThreadIndex(), jobIndex, obj);
-
-						try {
-							// 데이터를 넣는다. put()함수는 queue에 자리가 없는 경우 자리가 생길때 까지 대기함
-							THREAD_POOL_DATA[threadRunner.getThreadIndex()].put(threadJob);
-						} catch (Exception e) {
-							threadRunner.setReady();
-							System.out.println("check pushJob for threadIndex:" + threadRunner.getThreadIndex()
-									+ ", jobIndex: " + jobIndex + ", Object: " + obj.toString());
-							throw e;
-						}
-
-						return;
-					}
-				}
-			}
-
-			// 유휴 스레드 없을 시 Waiting Sleep(1s)
+	/**
+	 * <p>
+	 * 모든 작업 스레드에 종료 신호를 전달한다.
+	 * </p>
+	 */
+	private void pushShutdownJobs() {
+		for (int i = 0; i < maxThreadCount; i++) {
 			try {
-				TimeUnit.MILLISECONDS.sleep(1000 * 1);
-				// System.out.print("*");
-				System.out.println("WAITING WORKER");
-				waitCount++;
-			} catch (Exception e) {
+				jobQueue.put(ThreadJob.shutdownJob());
+			} catch (InterruptedException ie) {
+				Thread.currentThread().interrupt();
+				if (this.schedulerException == null) {
+					this.schedulerException = ie;
+				}
+				return;
 			}
 		}
 	}
@@ -210,10 +196,7 @@ public class ThreadPoolFramework {
 		try {
 			// 입력 데이타를 전부 읽었는지 확인
 			while (!this.getCheckEOF()) {
-				try {
-					Thread.sleep(1000 * 2);
-				} catch (Exception e) {
-				}
+				schedulerThread.join();
 			}
 
 			// 작업 스레드 종료 대기
@@ -223,13 +206,9 @@ public class ThreadPoolFramework {
 				throw this.schedulerException;
 			}
 
-			if (this.workerException != null) {
-				throw this.workerException;
+			if (this.workerException.get() != null) {
+				throw this.workerException.get();
 			}
-
-			// 스케줄 스레드 종료
-			schedulerThread.interrupt();
-			// schedulerThread.join(); // Spring Batch로 구현 시 join하는 경우 스레드 해제가 안되는 현상 발생함
 		} finally {
 			if (dataRepo != null)
 				dataRepo.close();
@@ -248,29 +227,13 @@ public class ThreadPoolFramework {
 	 * @throws InterruptedException 작업 스레드 종료시 에러 발생
 	 */
 	private void waitAllThread() throws InterruptedException {
-		while (true) {
-			ThreadRunner thread;
+		while (THREAD_POOL.size() > 0) {
+			ThreadRunner thread = null;
 			synchronized (THREAD_POOL) {
-				if (THREAD_POOL.size() <= 0) {
-					return;
-				}
-				thread = (ThreadRunner) THREAD_POOL.getFirst();
-
-				if (thread.isReady()) {
-					if (thread.getWorkerException() != null && this.workerException == null) {
-						this.workerException = thread.getWorkerException();
-					}
-					thread.interrupt();
-					THREAD_POOL.removeFirst();
-					System.out.print(">");
-					continue;
-				}
+				thread = (ThreadRunner) THREAD_POOL.removeFirst();
 			}
-
-			try {
-				Thread.sleep(1000 * 1);
-			} catch (Exception e) {
-			}
+			thread.join();
+			System.out.print(">");
 		}
 	}
 
