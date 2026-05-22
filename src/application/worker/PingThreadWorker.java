@@ -37,6 +37,11 @@ public class PingThreadWorker implements ThreadWorker{
 		String ipAddress = threadJob.getObject().toString();
 		
 		//System.out.println("index:"+countIndex+", ip:"+ipAddress);
+		if(!isValidPingTarget(ipAddress)){
+			addFailCount();
+			System.out.println("T"+String.format("%03d", threadIndex)+" ("+String.format("%03d", countIndex)+") PingTest ipAddress("+ipAddress+") --> 실패");
+			return;
+		}
 				
 		try{
 			byte[] msg = new byte[1024];
@@ -91,7 +96,7 @@ public class PingThreadWorker implements ThreadWorker{
 		
 	private ProcessBuilder createPingProcessBuilder(String ipAddress){
 		if(isWindows()){
-			return new ProcessBuilder("cmd", "/c", "chcp 437 > nul & ping -n 1 "+ipAddress);
+			return new ProcessBuilder("ping", "-n", "1", ipAddress);
 		}
 		return new ProcessBuilder("ping", "-c", "1", ipAddress);
 	}
@@ -99,6 +104,10 @@ public class PingThreadWorker implements ThreadWorker{
 	private boolean isWindows(){
 		String osName = System.getProperty("os.name");
 		return osName != null && osName.toLowerCase().contains("win");
+	}
+	
+	private boolean isValidPingTarget(String target){
+		return target != null && target.matches("[A-Za-z0-9._:-]+");
 	}
 	
 	private synchronized void addSuccessCount(){
