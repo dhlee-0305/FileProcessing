@@ -41,11 +41,12 @@ public class ThreadPoolFramework {
 	 * ThreadPoolFrame 클래스 생성자
 	 * </p>
 	 * 
-	 * @param worker         실제 작업을 실행할 클래스
-	 * @param filter         파일 해석 클래스
-	 * @param maxThreadCount 스레드 개수
-	 * 
-	 */
+		 * @param threadWorker   실제 작업을 실행할 클래스
+		 * @param dataRepo       파일 해석 클래스
+		 * @param maxThreadCount 스레드 개수
+		 * @throws Exception 스레드 풀 생성 시 에러 발생
+		 * 
+		 */
 	public ThreadPoolFramework(
 			ThreadWorker threadWorker,
 			DataRepository dataRepo,

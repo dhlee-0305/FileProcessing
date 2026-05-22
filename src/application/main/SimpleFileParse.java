@@ -6,7 +6,22 @@ import framework.DataRepository;
 import framework.ThreadPoolFramework;
 import framework.ThreadWorker;
 
+/**
+ * 메모리 맵 방식으로 파일을 읽어 문자열 처리 작업을 실행하는 예제 클래스
+ * 
+ * @author dhlee
+ * @version 1.0
+ * @since 1.0
+ * @see {@link ThreadPoolFramework}, {@link JeongSanFileWorker}, {@link MMapStringParser}
+ */
 public class SimpleFileParse {
+	/**
+	 * <p>
+	 * 간단한 파일 파싱 예제를 실행한다.
+	 * </p>
+	 * 
+	 * @param args 실행 인자
+	 */
 	public static void main(String[] args) {
 		System.out.println("=================================");
 		System.out.println("   SimpleFileWork Start!!");

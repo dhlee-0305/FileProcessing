@@ -33,6 +33,15 @@ public class ThreadRunner extends Thread{
 	private ThreadWorker threadWorker;
 	
 	
+	/**
+	 * <p>
+	 * ThreadRunner 클래스 생성자
+	 * </p>
+	 * 
+	 * @param threadIndex 스레드 인덱스 번호
+	 * @param threadData 작업 데이터를 전달하기 위한 Queue
+	 * @param threadWorker 실제 작업을 실행할 클래스
+	 */
 	ThreadRunner(int threadIndex, ThreadData threadData, ThreadWorker threadWorker){
 		this.threadIndex = threadIndex;
 		this.jobQueue = threadData;
@@ -40,6 +49,11 @@ public class ThreadRunner extends Thread{
 		this.threadWorker = threadWorker;
 	}
 	
+	/**
+	 * <p>
+	 * 작업 Queue에서 데이터를 받아 워커 작업을 실행한다.
+	 * </p>
+	 */
 	public void run(){
 		while(!Thread.interrupted()){
 			try{
@@ -62,18 +76,42 @@ public class ThreadRunner extends Thread{
 		}
 	}
 
+	/**
+	 * <p>
+	 * 스레드 인덱스 번호를 반환한다.
+	 * </p>
+	 * 
+	 * @return int 스레드 인덱스 번호
+	 */
 	public int getThreadIndex(){
 		return threadIndex;
 	}
 	
+	/**
+	 * <p>
+	 * 작업 스레드가 작업을 받을 수 있는 상태인지 반환한다.
+	 * </p>
+	 * 
+	 * @return boolean 작업 가능 여부
+	 */
 	public boolean isReady(){
 		return status;
 	}
 	
+	/**
+	 * <p>
+	 * 작업 스레드를 작업 중 상태로 변경한다.
+	 * </p>
+	 */
 	public void setBusy(){
 		status = false;
 	}
 	
+	/**
+	 * <p>
+	 * 작업 스레드를 작업 가능 상태로 변경한다.
+	 * </p>
+	 */
 	private void setReady(){
 		this.status = true;
 	}

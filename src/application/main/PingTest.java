@@ -6,7 +6,22 @@ import framework.DataRepository;
 import framework.ThreadPoolFramework;
 import framework.ThreadWorker;
 
+/**
+ * 파일에 정의된 IP 목록을 이용하여 Ping 테스트를 실행하는 예제 클래스
+ * 
+ * @author dhlee
+ * @version 1.0
+ * @since 1.0
+ * @see {@link ThreadPoolFramework}, {@link PingThreadWorker}, {@link CRStringParser}
+ */
 public class PingTest {
+	/**
+	 * <p>
+	 * Ping 테스트 예제를 실행한다.
+	 * </p>
+	 * 
+	 * @param args 입력 파일 경로와 작업 스레드 개수
+	 */
 	public static void main(String[] args) {
 		System.out.println("=================================");
 		System.out.println("     Ping Test Start!!");

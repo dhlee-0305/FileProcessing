@@ -22,6 +22,15 @@ public class ThreadJob{
 	private Object object = null;
 	
 	
+	/**
+	 * <p>
+	 * ThreadJob 클래스 생성자
+	 * </p>
+	 * 
+	 * @param threadIndex 스레드 인덱스 번호
+	 * @param jobID 잡 인덱스 번호
+	 * @param obj 작업을 위한 데이터
+	 */
 	ThreadJob(int threadIndex, long jobID, Object obj){
 		this.threadIndex = threadIndex;
 		this.jobIndex = jobID;

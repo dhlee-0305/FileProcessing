@@ -25,6 +25,13 @@ public class PingThreadWorker implements ThreadWorker{
 	private long failCount = 0;
 	private long totalCount = 0;
 	
+	/**
+	 * <p>
+	 * 스레드로부터 전달받은 IP 주소에 Ping 테스트를 수행한다.
+	 * </p>
+	 * 
+	 * @param threadJob 스케줄러가 작업 스레드에 전달하는 데이터 클래스
+	 */
 	public void serve(ThreadJob threadJob){
 		ByteArrayOutputStream pingResultByteArray = new ByteArrayOutputStream();
 		boolean isOK = false;
@@ -146,7 +153,14 @@ public class PingThreadWorker implements ThreadWorker{
 		failCount++;
 		totalCount++;
 	}
-	    
+		
+	/**
+	 * <p>
+	 * 최종 Ping 테스트 결과를 출력한다.
+	 * </p>
+	 * 
+	 * @return String 최종 작업 결과 정리 내역
+	 */
 	public synchronized String getSummary(){
 		return "Total:"+totalCount+", Success:"+successCount+", Fail:"+failCount;
 	}
