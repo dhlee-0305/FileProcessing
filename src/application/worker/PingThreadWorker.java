@@ -80,11 +80,9 @@ public class PingThreadWorker implements ThreadWorker{
 		String Result = "실패";
 		if(isOK){
 			Result = "성공";
-			successCount++;
-			totalCount++;
+			addSuccessCount();
 		}else{
-			failCount++;
-			totalCount++;
+			addFailCount();
 		}
 		
 		System.out.println("T"+String.format("%03d", threadIndex)+" ("+String.format("%03d", countIndex)+") PingTest ipAddress("+ipAddress+") --> "+Result);
@@ -102,8 +100,18 @@ public class PingThreadWorker implements ThreadWorker{
 		String osName = System.getProperty("os.name");
 		return osName != null && osName.toLowerCase().contains("win");
 	}
+	
+	private synchronized void addSuccessCount(){
+		successCount++;
+		totalCount++;
+	}
+	
+	private synchronized void addFailCount(){
+		failCount++;
+		totalCount++;
+	}
 	    
-	    public String getSummary(){
+	    public synchronized String getSummary(){
 	    	return "Total:"+totalCount+", Success:"+successCount+", Fail:"+failCount;
     }
 }

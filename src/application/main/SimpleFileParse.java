@@ -43,6 +43,13 @@ public class SimpleFileParse {
 			}catch(Exception e){}
 		}
 		
+		try{
+			if(threadPoolFrame != null)
+				threadPoolFrame.finishingJob();
+		}catch(Exception e){
+			System.out.println("SimpleFileWork.main.e3:"+e.getMessage());
+		}
+		
 		System.out.println("SimpleFileWork End!!");
 	}
 }
