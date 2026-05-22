@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * @version 1.0
  * @since 1.0
  */
-public class ThreadRunner extends Thread{
+public class ThreadRunner extends Thread {
 	/**
 	 * 스레드 인덱스(0 ~ MAX-1)
 	 */
@@ -34,72 +34,50 @@ public class ThreadRunner extends Thread{
 	 * 작업 실행 중 발생한 예외
 	 */
 	private AtomicReference<Exception> workerException = null;
-	
-	
+
 	/**
 	 * <p>
 	 * ThreadRunner 클래스 생성자
 	 * </p>
 	 * 
-	 * @param threadIndex 스레드 인덱스 번호
-	 * @param threadData 작업 데이터를 전달하기 위한 Queue
+	 * @param threadIndex  스레드 인덱스 번호
+	 * @param threadData   작업 데이터를 전달하기 위한 Queue
 	 * @param threadWorker 실제 작업을 실행할 클래스
 	 */
-	ThreadRunner(int threadIndex, ThreadData threadData, ThreadWorker threadWorker, AtomicReference<Exception> workerException){
+	ThreadRunner(int threadIndex, ThreadData threadData, ThreadWorker threadWorker,
+			AtomicReference<Exception> workerException) {
 		this.threadIndex = threadIndex;
 		this.jobQueue = threadData;
 		this.threadWorker = threadWorker;
 		this.workerException = workerException;
 	}
-	
+
 	/**
 	 * <p>
 	 * 작업 Queue에서 데이터를 받아 워커 작업을 실행한다.
 	 * </p>
 	 */
-	public void run(){
-		while(true){
-			try{
+	public void run() {
+		while (true) {
+			try {
 				// 1)ThreadJob 클래스에서 데이터를 받아옴 - 데이터가 없는 경우 대기함
 				ThreadJob threadJob = jobQueue.take();
-				if(threadJob.isShutdown()){
+				if (threadJob.isShutdown()) {
 					return;
 				}
 				threadJob.setThreadIndex(threadIndex);
-				
+
 				// 2)스레드 인덱스, 잡인덱스를 추가하여 데이터 전달(스레드인덱스, 작업인덱스, Data......)
-				//this.threadWorker.serve(threadIndex+","+data.getJobIndex()+","+data.getObject());
+				// this.threadWorker.serve(threadIndex+","+data.getJobIndex()+","+data.getObject());
 				this.threadWorker.serve(threadJob);
-				
+
 				Thread.yield();
-			}catch(InterruptedException ie){
+			} catch (InterruptedException ie) {
 				return;
-			}catch(Exception e){
+			} catch (Exception e) {
 				this.workerException.compareAndSet(null, e);
-				System.out.println("ServerRunner : "+e.getMessage());
+				System.out.println("ServerRunner : " + e.getMessage());
 			}
 		}
-	}
-
-	/**
-	 * <p>
-	 * 스레드 인덱스 번호를 반환한다.
-	 * </p>
-	 * 
-	 * @return int 스레드 인덱스 번호
-	 */
-	public int getThreadIndex(){
-		return threadIndex;
-	}
-
-	/**
-	 * <p>
-	 * 작업 실행 중 발생한 예외를 반환한다.
-	 * </p>
-	 * 
-	 * @return Exception 작업 실행 중 발생한 예외
-	 */
-	public Exception getWorkerException(){
-		return this.workerException.get();
 	}
 }

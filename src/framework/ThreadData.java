@@ -10,15 +10,8 @@ import java.util.concurrent.LinkedBlockingQueue;
  * @version 1.0
  * @since 1.0
  */
-public class ThreadData extends LinkedBlockingQueue<ThreadJob>{
-	/**
-	 * <p>
-	 * ThreadData 클래스 생성자
-	 * </p>
-	 */
-	public ThreadData(){
-		super();
-	}
+public class ThreadData extends LinkedBlockingQueue<ThreadJob> {
+	private static final long serialVersionUID = 1L;
 
 	/**
 	 * <p>
@@ -27,7 +20,7 @@ public class ThreadData extends LinkedBlockingQueue<ThreadJob>{
 	 * 
 	 * @param capacity 큐 최대 용량
 	 */
-	public ThreadData(int capacity){
+	public ThreadData(int capacity) {
 		super(capacity);
 	}
 }

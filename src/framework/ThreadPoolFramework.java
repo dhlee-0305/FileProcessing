@@ -230,7 +230,7 @@ public class ThreadPoolFramework {
 		while (THREAD_POOL.size() > 0) {
 			ThreadRunner thread = null;
 			synchronized (THREAD_POOL) {
-				thread = (ThreadRunner) THREAD_POOL.removeFirst();
+				thread = THREAD_POOL.removeFirst();
 			}
 			thread.join();
 			System.out.print(">");

@@ -7,7 +7,7 @@ package framework;
  * @version 1.0
  * @since 1.0
  */
-public class ThreadJob{
+public class ThreadJob {
 	/**
 	 * 스레드 인덱스(start 0)
 	 */
@@ -24,18 +24,17 @@ public class ThreadJob{
 	 * 작업 스레드 종료 신호 여부
 	 */
 	private boolean shutdown = false;
-	
-	
+
 	/**
 	 * <p>
 	 * ThreadJob 클래스 생성자
 	 * </p>
 	 * 
 	 * @param threadIndex 스레드 인덱스 번호
-	 * @param jobID 잡 인덱스 번호
-	 * @param obj 작업을 위한 데이터
+	 * @param jobID       잡 인덱스 번호
+	 * @param obj         작업을 위한 데이터
 	 */
-	ThreadJob(int threadIndex, long jobID, Object obj){
+	ThreadJob(int threadIndex, long jobID, Object obj) {
 		this.threadIndex = threadIndex;
 		this.jobIndex = jobID;
 		this.object = obj;
@@ -48,7 +47,7 @@ public class ThreadJob{
 	 * 
 	 * @return ThreadJob 작업 스레드 종료 신호
 	 */
-	static ThreadJob shutdownJob(){
+	static ThreadJob shutdownJob() {
 		ThreadJob threadJob = new ThreadJob(-1, -1, null);
 		threadJob.shutdown = true;
 		return threadJob;
@@ -76,24 +75,10 @@ public class ThreadJob{
 	}
 
 	/**
-	 * @param jobIndex the jobIndex to set
-	 */
-	public void setJobIndex(long jobIndex) {
-		this.jobIndex = jobIndex;
-	}
-
-	/**
 	 * @return the object
 	 */
 	public Object getObject() {
 		return object;
-	}
-
-	/**
-	 * @param object the object to set
-	 */
-	public void setObject(Object object) {
-		this.object = object;
 	}
 
 	/**
