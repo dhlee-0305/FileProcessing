@@ -83,6 +83,7 @@ public class ThreadRunner extends Thread {
 
 				Thread.yield();
 			} catch (InterruptedException ie) {
+				Thread.currentThread().interrupt();
 				return;
 			} catch (Exception e) {
 				this.workerException.compareAndSet(null, e);
