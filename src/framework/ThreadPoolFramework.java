@@ -25,11 +25,14 @@ public class ThreadPoolFramework {
 	/** 파일 해석 클래스 멤버 변수 */
 	private DataRepository dataRepo = null;
 
-	/** 파일 종료 확인 변수 */
-	private volatile boolean checkEOF = false;
+	/** 입력 데이터를 모두 읽었는지 확인하는 변수 */
+	private AtomicBoolean inputFinished = new AtomicBoolean(false);
 
 	/** 스케줄러가 더 이상 작업을 추가하지 않는지 확인하는 변수 */
 	private AtomicBoolean schedulerFinished = new AtomicBoolean(false);
+
+	/** 작업 스레드가 모두 종료되었는지 확인하는 변수 */
+	private AtomicBoolean workerFinished = new AtomicBoolean(false);
 
 	/** 스케줄 스레드에서 발생한 예외 */
 	private volatile Exception schedulerException = null;
@@ -123,6 +126,7 @@ public class ThreadPoolFramework {
 				if (readData == null) {
 					// EOF
 					System.out.println("threadScheduler(1) EOF");
+					this.inputFinished.set(true);
 					return;
 				}
 
@@ -139,7 +143,6 @@ public class ThreadPoolFramework {
 			return;
 		} finally {
 			this.schedulerFinished.set(true);
-			this.checkEOF = true;
 		}
 	}
 
@@ -167,19 +170,17 @@ public class ThreadPoolFramework {
 	 * </p>
 	 * 
 	 * <pre>
-	 * 1) 입력 데이타를 전부 읽었는지 확인
+	 * 1) 스케줄 스레드 종료 대기
 	 * 2) 작업 스레드 종료 대기
-	 * 3) 스케줄 스레드 종료
+	 * 3) 스케줄러와 작업 스레드 예외 확인
 	 * </pre>
 	 * 
 	 * @throws Exception 스케줄 스레드 종료시 에러 발생
 	 */
 	public void finishingJob() throws Exception {
 		try {
-			// 입력 데이타를 전부 읽었는지 확인
-			while (!this.getCheckEOF()) {
-				schedulerThread.join();
-			}
+			// 스케줄러 스레드 종료 대기
+			schedulerThread.join();
 
 			// 작업 스레드 종료 대기
 			waitAllThread();
@@ -217,15 +218,61 @@ public class ThreadPoolFramework {
 			thread.join();
 			System.out.print(">");
 		}
+		this.workerFinished.set(true);
 	}
 
 	/**
 	 * <p>
-	 * 입력데이터 종료를 설정
+	 * 스케줄러가 더 이상 작업을 추가하지 않는지 확인한다.
 	 * </p>
 	 * 
+	 * @return boolean 스케줄러 종료 여부
 	 */
 	public boolean getCheckEOF() {
-		return this.checkEOF;
+		return isSchedulerFinished();
+	}
+
+	/**
+	 * <p>
+	 * 입력 데이터를 모두 읽었는지 확인한다.
+	 * </p>
+	 * 
+	 * @return boolean 입력 EOF 여부
+	 */
+	public boolean isInputFinished() {
+		return this.inputFinished.get();
+	}
+
+	/**
+	 * <p>
+	 * 스케줄러가 더 이상 작업을 추가하지 않는지 확인한다.
+	 * </p>
+	 * 
+	 * @return boolean 스케줄러 종료 여부
+	 */
+	public boolean isSchedulerFinished() {
+		return this.schedulerFinished.get();
+	}
+
+	/**
+	 * <p>
+	 * 작업 스레드가 모두 종료되었는지 확인한다.
+	 * </p>
+	 * 
+	 * @return boolean 작업 스레드 종료 여부
+	 */
+	public boolean isWorkerFinished() {
+		return this.workerFinished.get();
+	}
+
+	/**
+	 * <p>
+	 * 스케줄러와 작업 스레드가 모두 종료되었는지 확인한다.
+	 * </p>
+	 * 
+	 * @return boolean 전체 작업 종료 여부
+	 */
+	public boolean isFinished() {
+		return isSchedulerFinished() && isWorkerFinished();
 	}
 }
