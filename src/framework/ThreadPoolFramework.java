@@ -1,6 +1,7 @@
 package framework;
 
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -27,6 +28,9 @@ public class ThreadPoolFramework {
 	/** 파일 종료 확인 변수 */
 	private volatile boolean checkEOF = false;
 
+	/** 스케줄러가 더 이상 작업을 추가하지 않는지 확인하는 변수 */
+	private AtomicBoolean schedulerFinished = new AtomicBoolean(false);
+
 	/** 스케줄 스레드에서 발생한 예외 */
 	private volatile Exception schedulerException = null;
 
@@ -38,9 +42,6 @@ public class ThreadPoolFramework {
 
 	/** 작업 스레드에 전달할 공유 Queue */
 	private ThreadData jobQueue = null;
-
-	/** 작업 스레드 개수 */
-	private int maxThreadCount = 0;
 
 	/**
 	 * <p>
@@ -70,7 +71,6 @@ public class ThreadPoolFramework {
 
 		this.threadWorker = threadWorker;
 		this.dataRepo = dataRepo;
-		this.maxThreadCount = maxThreadCount;
 
 		jobQueue = new ThreadData(maxThreadCount * 2);
 
@@ -101,7 +101,8 @@ public class ThreadPoolFramework {
 	 * @param int idx 스레드 인덱스 번호
 	 */
 	private void createThreadPool(int threadIndex) {
-		ThreadRunner threadRunner = new ThreadRunner(threadIndex, jobQueue, this.threadWorker, this.workerException);
+		ThreadRunner threadRunner = new ThreadRunner(threadIndex, jobQueue, this.threadWorker, this.workerException,
+				this.schedulerFinished);
 
 		synchronized (THREAD_POOL) {
 			THREAD_POOL.add(threadRunner);
@@ -137,7 +138,7 @@ public class ThreadPoolFramework {
 			this.schedulerException = e;
 			return;
 		} finally {
-			pushShutdownJobs();
+			this.schedulerFinished.set(true);
 			this.checkEOF = true;
 		}
 	}
@@ -158,25 +159,6 @@ public class ThreadPoolFramework {
 	private void pushJob(long jobIndex, Object obj) throws Exception {
 		ThreadJob threadJob = new ThreadJob(-1, jobIndex, obj);
 		jobQueue.put(threadJob);
-	}
-
-	/**
-	 * <p>
-	 * 모든 작업 스레드에 종료 신호를 전달한다.
-	 * </p>
-	 */
-	private void pushShutdownJobs() {
-		for (int i = 0; i < maxThreadCount; i++) {
-			try {
-				jobQueue.put(ThreadJob.shutdownJob());
-			} catch (InterruptedException ie) {
-				Thread.currentThread().interrupt();
-				if (this.schedulerException == null) {
-					this.schedulerException = ie;
-				}
-				return;
-			}
-		}
 	}
 
 	/**

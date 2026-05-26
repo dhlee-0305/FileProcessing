@@ -1,5 +1,7 @@
 package framework;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -7,9 +9,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * 실제 작업은 ThreadWorker 인터페이스를 구현한 클래스를 작업에 이용한다.
  * 
  * <pre>
- * 1) 공유 작업 Queue에서 데이타가 들어올때까지 take()
+ * 1) 공유 작업 Queue에서 데이타가 들어올때까지 poll()
  * 2) 작업 클래스를 통해 데이타 처리
- * 3) 종료 신호를 수신하면 스레드 종료
+ * 3) 스케줄러가 종료되고 Queue가 비면 스레드 종료
  * </pre>
  * 
  * @author dhlee
@@ -34,6 +36,10 @@ public class ThreadRunner extends Thread {
 	 * 작업 실행 중 발생한 예외
 	 */
 	private AtomicReference<Exception> workerException = null;
+	/**
+	 * 스케줄러가 더 이상 작업을 추가하지 않는지 확인하는 변수
+	 */
+	private AtomicBoolean schedulerFinished = null;
 
 	/**
 	 * <p>
@@ -45,11 +51,12 @@ public class ThreadRunner extends Thread {
 	 * @param threadWorker 실제 작업을 실행할 클래스
 	 */
 	ThreadRunner(int threadIndex, ThreadData threadData, ThreadWorker threadWorker,
-			AtomicReference<Exception> workerException) {
+			AtomicReference<Exception> workerException, AtomicBoolean schedulerFinished) {
 		this.threadIndex = threadIndex;
 		this.jobQueue = threadData;
 		this.threadWorker = threadWorker;
 		this.workerException = workerException;
+		this.schedulerFinished = schedulerFinished;
 	}
 
 	/**
@@ -60,10 +67,13 @@ public class ThreadRunner extends Thread {
 	public void run() {
 		while (true) {
 			try {
-				// 1)ThreadJob 클래스에서 데이터를 받아옴 - 데이터가 없는 경우 대기함
-				ThreadJob threadJob = jobQueue.take();
-				if (threadJob.isShutdown()) {
-					return;
+				// 1)ThreadJob 클래스에서 데이터를 받아옴 - 데이터가 없는 경우 짧게 대기함
+				ThreadJob threadJob = jobQueue.poll(100, TimeUnit.MILLISECONDS);
+				if (threadJob == null) {
+					if (schedulerFinished.get() && jobQueue.isEmpty()) {
+						return;
+					}
+					continue;
 				}
 				threadJob.setThreadIndex(threadIndex);
 

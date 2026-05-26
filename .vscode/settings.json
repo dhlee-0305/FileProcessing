@@ -4,6 +4,8 @@
         "dhlee",
         "javac",
         "jeong",
-        "mmap"
+        "mmap",
+        "println",
+        "Xlint"
     ]
 }

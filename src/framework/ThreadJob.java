@@ -20,10 +20,6 @@ public class ThreadJob {
 	 * 작업을 위한 데이터
 	 */
 	private Object object = null;
-	/**
-	 * 작업 스레드 종료 신호 여부
-	 */
-	private boolean shutdown = false;
 
 	/**
 	 * <p>
@@ -38,19 +34,6 @@ public class ThreadJob {
 		this.threadIndex = threadIndex;
 		this.jobIndex = jobID;
 		this.object = obj;
-	}
-
-	/**
-	 * <p>
-	 * 작업 스레드 종료 신호를 생성한다.
-	 * </p>
-	 * 
-	 * @return ThreadJob 작업 스레드 종료 신호
-	 */
-	static ThreadJob shutdownJob() {
-		ThreadJob threadJob = new ThreadJob(-1, -1, null);
-		threadJob.shutdown = true;
-		return threadJob;
 	}
 
 	/**
@@ -79,13 +62,6 @@ public class ThreadJob {
 	 */
 	public Object getObject() {
 		return object;
-	}
-
-	/**
-	 * @return the shutdown
-	 */
-	public boolean isShutdown() {
-		return shutdown;
 	}
 
 }
